@@ -301,11 +301,23 @@ export async function handleNewMessage(message: BBMessage): Promise<void> {
         continue;
       }
       try {
-        await bbClient.downloadAttachment(attachment.guid);
+        const data = await bbClient.downloadAttachment(attachment.guid);
+        if (!data || data.length === 0) {
+          logger.error(`Attachment ${attachment.guid} download returned empty data`);
+          await sendResponse(
+            chatGuid,
+            `Sorry, I couldn't download the attachment "${attachment.transferName}".`,
+          );
+          return;
+        }
         text += `${text ? " " : ""}[attachment: ${attachment.transferName}]`;
       } catch (err) {
         logger.error(`Failed to download attachment ${attachment.guid}:`, err);
-        text += `${text ? " " : ""}[attachment: ${attachment.transferName}]`;
+        await sendResponse(
+          chatGuid,
+          `Sorry, I couldn't download the attachment "${attachment.transferName}".`,
+        );
+        return;
       }
     }
   }

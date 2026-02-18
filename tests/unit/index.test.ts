@@ -395,10 +395,6 @@ describe("handleNewMessage()", () => {
   });
 
   it("processes attachment-only message (text is Unicode object replacement char)", async () => {
-    mockFetch
-      // For sendText response
-      .mockResolvedValueOnce({ json: async () => ({ status: 200, data: {} }) });
-
     const message = makeMessage({
       text: "\ufffc",
       attachments: [
@@ -416,13 +412,15 @@ describe("handleNewMessage()", () => {
       ],
     });
 
-    // Mock attachment download
+    // Mock attachment download (consumed first during handleNewMessage)
     const attachmentData = new Uint8Array([1, 2, 3]);
     mockFetch.mockResolvedValueOnce({
       ok: true,
+      headers: { get: () => null },
+      body: null,
       arrayBuffer: async () => attachmentData.buffer,
     });
-    // Mock sendText
+    // Mock sendText (consumed after inject)
     mockFetch.mockResolvedValueOnce({ json: async () => ({ status: 200, data: {} }) });
 
     await handleNewMessage(message as any);

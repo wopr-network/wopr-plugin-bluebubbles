@@ -152,12 +152,36 @@ export class BlueBubblesClient {
   }
 
   async downloadAttachment(guid: string): Promise<Buffer> {
+    const MAX_BYTES = 10 * 1024 * 1024; // 10MB
     const url = `${this.serverUrl}/api/v1/attachment/${encodeURIComponent(guid)}/download?password=${encodeURIComponent(this.password)}`;
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`Attachment download failed: ${res.status} ${res.statusText}`);
     }
+    const contentLength = res.headers?.get("Content-Length") ?? null;
+    if (contentLength !== null && parseInt(contentLength, 10) > MAX_BYTES) {
+      throw new Error(`Attachment exceeds 10MB size limit (Content-Length: ${contentLength})`);
+    }
+    if (res.body) {
+      const chunks: Uint8Array[] = [];
+      let totalBytes = 0;
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.length;
+        if (totalBytes > MAX_BYTES) {
+          await reader.cancel();
+          throw new Error(`Attachment exceeds 10MB size limit`);
+        }
+        chunks.push(value);
+      }
+      return Buffer.concat(chunks);
+    }
     const arrayBuf = await res.arrayBuffer();
+    if (arrayBuf.byteLength > MAX_BYTES) {
+      throw new Error(`Attachment exceeds 10MB size limit`);
+    }
     return Buffer.from(arrayBuf);
   }
 
