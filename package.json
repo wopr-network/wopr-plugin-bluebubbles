@@ -41,5 +41,8 @@
     "imessage",
     "sms",
     "bridge"
-  ]
+  ],
+  "release": {
+    "extends": "@wopr-network/semantic-release-config"
+  }
 }
