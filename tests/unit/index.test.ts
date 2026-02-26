@@ -149,6 +149,38 @@ describe("Plugin exports", () => {
   });
 });
 
+describe("Manifest fields", () => {
+  it("has category set to channel", () => {
+    expect(plugin.category).toBe("channel");
+  });
+
+  it("has configSchema defined", () => {
+    expect(plugin.configSchema).toBeDefined();
+    expect(plugin.configSchema!.fields.length).toBeGreaterThan(0);
+  });
+
+  it("has password field marked as secret", () => {
+    const pwField = plugin.configSchema!.fields.find((f) => f.name === "password");
+    expect(pwField).toBeDefined();
+    expect(pwField!.secret).toBe(true);
+  });
+
+  it("has serverUrl and password fields with setupFlow required", () => {
+    const serverUrl = plugin.configSchema!.fields.find((f) => f.name === "serverUrl");
+    const password = plugin.configSchema!.fields.find((f) => f.name === "password");
+    expect(serverUrl!.setupFlow).toBe("required");
+    expect(password!.setupFlow).toBe("required");
+  });
+
+  it("provides channel:bluebubbles capability", () => {
+    expect(plugin.provides).toContain("channel:bluebubbles");
+  });
+
+  it("has lifecycle singleton true", () => {
+    expect(plugin.lifecycle?.singleton).toBe(true);
+  });
+});
+
 describe("isGroupChat()", () => {
   it("returns true for iMessage group GUID (separator +)", () => {
     expect(isGroupChat("iMessage;+;chat123456789")).toBe(true);
