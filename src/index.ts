@@ -402,9 +402,6 @@ const plugin: WOPRPlugin = {
 
     // Always register config schema
     ctx.registerConfigSchema("bluebubbles", configSchema);
-    cleanups.push(() =>
-      ctx?.registerConfigSchema("bluebubbles", { title: "", description: "", fields: [] }),
-    );
 
     await refreshIdentity();
 
