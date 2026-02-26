@@ -24,6 +24,7 @@ let bbClient: BlueBubblesClient | null = null;
 let isShuttingDown = false;
 let privateApiAvailable = false;
 let logger: winston.Logger;
+const cleanups: Array<() => void> = [];
 
 // Initialize winston logger
 function initLogger(): winston.Logger {
@@ -65,6 +66,7 @@ const configSchema: ConfigSchema = {
       placeholder: "http://192.168.1.100:1234",
       required: true,
       description: "BlueBubbles server URL (include port)",
+      setupFlow: "required",
     },
     {
       name: "password",
@@ -73,6 +75,8 @@ const configSchema: ConfigSchema = {
       placeholder: "your-server-password",
       required: true,
       description: "BlueBubbles server password (shown in server app)",
+      secret: true,
+      setupFlow: "required",
     },
     {
       name: "dmPolicy",
@@ -142,8 +146,8 @@ async function refreshIdentity(): Promise<void> {
       agentIdentity = { ...agentIdentity, ...identity };
       logger.info("Identity refreshed:", agentIdentity.name);
     }
-  } catch (e) {
-    logger.warn("Failed to refresh identity:", String(e));
+  } catch (error: unknown) {
+    logger.warn("Failed to refresh identity:", String(error));
   }
 }
 
@@ -237,8 +241,8 @@ export async function sendResponse(
       await bbClient.sendText(chatGuid, chunks[i], {
         replyToGuid: i === 0 ? replyToGuid : undefined,
       });
-    } catch (err) {
-      logger.error("Failed to send BlueBubbles message chunk:", err);
+    } catch (error: unknown) {
+      logger.error("Failed to send BlueBubbles message chunk:", error);
     }
   }
 }
@@ -311,8 +315,8 @@ export async function handleNewMessage(message: BBMessage): Promise<void> {
           return;
         }
         text += `${text ? " " : ""}[attachment: ${attachment.transferName}]`;
-      } catch (err) {
-        logger.error(`Failed to download attachment ${attachment.guid}:`, err);
+      } catch (error: unknown) {
+        logger.error(`Failed to download attachment ${attachment.guid}:`, error);
         await sendResponse(
           chatGuid,
           `Sorry, I couldn't download the attachment "${attachment.transferName}".`,
@@ -344,8 +348,8 @@ export async function handleNewMessage(message: BBMessage): Promise<void> {
   if (config.enableReactions !== false && privateApiAvailable) {
     try {
       await bbClient.sendReaction(chatGuid, message.guid, "+like");
-    } catch (err) {
-      logger.error("Failed to send reaction:", err);
+    } catch (error: unknown) {
+      logger.error("Failed to send reaction:", error);
     }
   }
 
@@ -357,8 +361,8 @@ export async function handleNewMessage(message: BBMessage): Promise<void> {
       from: senderAddress,
       channel: channelInfo,
     });
-  } catch (err) {
-    logger.error("Failed to inject message:", err);
+  } catch (error: unknown) {
+    logger.error("Failed to inject message:", error);
     return;
   }
 
@@ -369,8 +373,8 @@ export async function handleNewMessage(message: BBMessage): Promise<void> {
   if (config.sendReadReceipts !== false && privateApiAvailable) {
     try {
       await bbClient.markChatRead(chatGuid);
-    } catch (err) {
-      logger.error("Failed to mark chat as read:", err);
+    } catch (error: unknown) {
+      logger.error("Failed to mark chat as read:", error);
     }
   }
 }
@@ -380,6 +384,14 @@ const plugin: WOPRPlugin = {
   name: "bluebubbles",
   version: "1.0.0",
   description: "BlueBubbles iMessage/SMS bridge",
+  category: "channel",
+  tags: ["imessage", "sms", "bluebubbles", "channel"],
+  icon: "💬",
+  capabilities: ["channel:bluebubbles"],
+  provides: ["channel:bluebubbles"],
+  requires: {},
+  lifecycle: { singleton: true },
+  configSchema,
 
   async init(context: WOPRPluginContext): Promise<void> {
     ctx = context;
@@ -390,6 +402,9 @@ const plugin: WOPRPlugin = {
 
     // Always register config schema
     ctx.registerConfigSchema("bluebubbles", configSchema);
+    cleanups.push(() =>
+      ctx?.registerConfigSchema("bluebubbles", { title: "", description: "", fields: [] }),
+    );
 
     await refreshIdentity();
 
@@ -398,7 +413,7 @@ const plugin: WOPRPlugin = {
     let password: string;
     try {
       ({ serverUrl, password } = resolveCredentials());
-    } catch (_err) {
+    } catch (_: unknown) {
       logger.warn(
         "No BlueBubbles credentials configured. Run 'wopr configure --plugin bluebubbles' to set up.",
       );
@@ -415,8 +430,8 @@ const plugin: WOPRPlugin = {
         bbClient = null;
         return;
       }
-    } catch (err) {
-      logger.error("Failed to ping BlueBubbles server:", err);
+    } catch (error: unknown) {
+      logger.error("Failed to ping BlueBubbles server:", error);
       bbClient = null;
       return;
     }
@@ -430,8 +445,8 @@ const plugin: WOPRPlugin = {
       } else {
         logger.warn("BlueBubbles Private API not enabled -- reactions and read receipts disabled");
       }
-    } catch (err) {
-      logger.warn("Failed to check Private API status:", err);
+    } catch (error: unknown) {
+      logger.warn("Failed to check Private API status:", error);
       privateApiAvailable = false;
     }
 
@@ -443,15 +458,25 @@ const plugin: WOPRPlugin = {
     try {
       await bbClient.connect();
       logger.info(`BlueBubbles plugin connected to ${serverUrl}`);
-    } catch (err) {
-      logger.error("Failed to connect to BlueBubbles server:", err);
+    } catch (error: unknown) {
+      logger.error("Failed to connect to BlueBubbles server:", error);
     }
   },
 
   async shutdown(): Promise<void> {
     isShuttingDown = true;
+    for (const cleanup of cleanups) {
+      try {
+        cleanup();
+      } catch {
+        /* swallow */
+      }
+    }
+    cleanups.length = 0;
     bbClient?.disconnect();
     bbClient = null;
+    privateApiAvailable = false;
+    config = {};
     ctx = null;
   },
 };

@@ -11,6 +11,8 @@ export interface ConfigField {
   description?: string;
   hidden?: boolean;
   default?: any;
+  secret?: boolean;
+  setupFlow?: "required" | "optional";
 }
 
 export interface ConfigSchema {
@@ -85,6 +87,14 @@ export interface WOPRPlugin {
   name: string;
   version: string;
   description: string;
+  capabilities?: string[];
+  category?: string;
+  tags?: string[];
+  icon?: string;
+  requires?: { capabilities?: string[] };
+  provides?: string[];
+  lifecycle?: { singleton?: boolean };
+  configSchema?: ConfigSchema;
   init?: (context: WOPRPluginContext) => Promise<void>;
   shutdown?: () => Promise<void>;
 }
