@@ -2,6 +2,16 @@
  * Local type definitions for WOPR BlueBubbles Plugin
  */
 
+export type {
+  AgentIdentity,
+  PluginInjectOptions as InjectOptions,
+  PluginLogger,
+  StreamMessage,
+  UserProfile,
+} from "@wopr-network/plugin-types";
+
+// BlueBubbles uses "required"/"optional" setupFlow values which differ from
+// the canonical SetupFlowType in plugin-types. Keep these local until plugin-types aligns.
 export interface ConfigField {
   name: string;
   type: string;
@@ -10,9 +20,10 @@ export interface ConfigField {
   required?: boolean;
   description?: string;
   hidden?: boolean;
-  default?: any;
+  default?: unknown;
   secret?: boolean;
   setupFlow?: "required" | "optional";
+  options?: Array<{ value: string; label: string }>;
 }
 
 export interface ConfigSchema {
@@ -21,9 +32,24 @@ export interface ConfigSchema {
   fields: ConfigField[];
 }
 
-export interface StreamMessage {
-  type: "text" | "assistant";
-  content: string;
+import type { WOPRPluginContext } from "@wopr-network/plugin-types";
+export type { WOPRPluginContext };
+
+// Local WOPRPlugin with BlueBubbles-specific manifest fields not yet in plugin-types
+export interface WOPRPlugin {
+  name: string;
+  version: string;
+  description: string;
+  category?: string;
+  tags?: string[];
+  icon?: string;
+  capabilities?: string[];
+  provides?: string[];
+  requires?: Record<string, unknown>;
+  lifecycle?: { singleton?: boolean };
+  configSchema?: ConfigSchema;
+  init?: (context: WOPRPluginContext) => Promise<void>;
+  shutdown?: () => Promise<void>;
 }
 
 export interface ChannelInfo {
@@ -32,71 +58,9 @@ export interface ChannelInfo {
   name?: string;
 }
 
-export interface InjectOptions {
-  silent?: boolean;
-  onStream?: (msg: StreamMessage) => void;
-  from?: string;
-  channel?: ChannelInfo;
-  images?: string[];
-}
-
 export interface LogMessageOptions {
   from?: string;
   channel?: ChannelInfo;
-}
-
-export interface PluginLogger {
-  info: (...args: any[]) => void;
-  warn: (...args: any[]) => void;
-  error: (...args: any[]) => void;
-}
-
-export interface AgentIdentity {
-  name?: string;
-  creature?: string;
-  vibe?: string;
-  emoji?: string;
-}
-
-export interface UserProfile {
-  name?: string;
-  preferredAddress?: string;
-  pronouns?: string;
-  timezone?: string;
-  notes?: string;
-}
-
-export interface WOPRPluginContext {
-  inject: (session: string, message: string, options?: InjectOptions) => Promise<string>;
-  logMessage: (session: string, message: string, options?: LogMessageOptions) => void;
-  injectPeer: (peer: string, session: string, message: string) => Promise<string>;
-  getIdentity: () => { publicKey: string; shortId: string; encryptPub: string };
-  getAgentIdentity: () => AgentIdentity | Promise<AgentIdentity>;
-  getUserProfile: () => UserProfile | Promise<UserProfile>;
-  getSessions: () => string[];
-  getPeers: () => any[];
-  getConfig: <T = any>() => T;
-  saveConfig: <T>(config: T) => Promise<void>;
-  getMainConfig: (key?: string) => any;
-  registerConfigSchema: (pluginId: string, schema: ConfigSchema) => void;
-  getPluginDir: () => string;
-  log: PluginLogger;
-}
-
-export interface WOPRPlugin {
-  name: string;
-  version: string;
-  description: string;
-  capabilities?: string[];
-  category?: string;
-  tags?: string[];
-  icon?: string;
-  requires?: { capabilities?: string[] };
-  provides?: string[];
-  lifecycle?: { singleton?: boolean };
-  configSchema?: ConfigSchema;
-  init?: (context: WOPRPluginContext) => Promise<void>;
-  shutdown?: () => Promise<void>;
 }
 
 // BlueBubbles API types

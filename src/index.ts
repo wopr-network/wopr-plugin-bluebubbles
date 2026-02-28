@@ -401,7 +401,8 @@ const plugin: WOPRPlugin = {
     logger = initLogger();
 
     // Always register config schema
-    ctx.registerConfigSchema("bluebubbles", configSchema);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ctx.registerConfigSchema("bluebubbles", configSchema as any);
 
     await refreshIdentity();
 

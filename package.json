@@ -17,8 +17,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@wopr-network/plugin-types": "^0.7.1",
     "socket.io-client": "^4.8.0",
     "winston": "^3.11.0"
+  },
+  "peerDependencies": {
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.15",
