@@ -4,7 +4,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 vi.mock("socket.io-client", () => {
   const mockSocket = {
     on: vi.fn().mockImplementation((event: string, handler: () => void) => {
-      if (event === "connect") setTimeout(handler, 0);
+      if (event === "connect") handler();
     }),
     emit: vi.fn(),
     disconnect: vi.fn(),
