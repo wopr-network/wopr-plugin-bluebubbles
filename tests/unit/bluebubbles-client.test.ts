@@ -67,7 +67,7 @@ describe("BlueBubblesClient", () => {
       const connectSpy = vi.fn();
       const mockSocket = {
         on: vi.fn().mockImplementation((event: string, handler: () => void) => {
-          if (event === "connect") setTimeout(handler, 0);
+          if (event === "connect") handler();
         }),
         emit: vi.fn(),
         disconnect: vi.fn(),
@@ -91,7 +91,7 @@ describe("BlueBubblesClient", () => {
     it("registers new-message, updated-message, and typing-indicator event listeners", async () => {
       const mockSocket = {
         on: vi.fn().mockImplementation((event: string, handler: () => void) => {
-          if (event === "connect") setTimeout(handler, 0);
+          if (event === "connect") handler();
         }),
         emit: vi.fn(),
         disconnect: vi.fn(),
@@ -113,7 +113,7 @@ describe("BlueBubblesClient", () => {
     it("calls socket.disconnect() and removeAllListeners()", async () => {
       const mockSocket = {
         on: vi.fn().mockImplementation((event: string, handler: () => void) => {
-          if (event === "connect") setTimeout(handler, 0);
+          if (event === "connect") handler();
         }),
         emit: vi.fn(),
         disconnect: vi.fn(),
